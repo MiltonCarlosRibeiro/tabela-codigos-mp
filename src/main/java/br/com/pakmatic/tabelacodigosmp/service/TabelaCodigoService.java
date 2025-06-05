@@ -10,13 +10,13 @@ import java.io.FileInputStream;
 import java.util.*;
 
 /**
- * Serviço que busca apenas nas colunas A e B (índices 0 e 1),
- * mas retorna a linha completa da planilha se encontrar correspondência.
+ * Serviço que varre TODAS as abas e TODAS as colunas da planilha Excel,
+ * mesmo além dos headers visíveis.
  */
 @Service
 public class TabelaCodigoService {
 
-    private static final String CAMINHO_ARQUIVO = "U:/IFS - MILTON/LISTA MATÉRIA_Mod.xlsm";
+    private static final String CAMINHO_ARQUIVO = "C:/tabela-codigos-mp/LISTA MATÉRIA_Mod.xlsm";
 
     public List<LinhaResultadoDTO> buscarLinhasQueContem(String codigo) {
         List<LinhaResultadoDTO> resultados = new ArrayList<>();
@@ -28,37 +28,25 @@ public class TabelaCodigoService {
             for (int s = 0; s < workbook.getNumberOfSheets(); s++) {
                 Sheet sheet = workbook.getSheetAt(s);
                 String nomeAba = sheet.getSheetName();
-                Iterator<Row> rowIterator = sheet.iterator();
 
-                List<String> headers = new ArrayList<>();
-                boolean primeiraLinha = true;
+                for (Row row : sheet) {
+                    Map<String, String> linha = new LinkedHashMap<>();
+                    boolean contemCodigo = false;
 
-                while (rowIterator.hasNext()) {
-                    Row row = rowIterator.next();
+                    int colunasTotais = row.getLastCellNum();
+                    for (int i = 0; i < colunasTotais; i++) {
+                        Cell cell = row.getCell(i);
+                        String valor = getValorCelula(cell);
+                        String header = "Coluna " + (i + 1);
 
-                    if (primeiraLinha) {
-                        for (Cell cell : row) {
-                            headers.add(getValorCelula(cell));
+                        linha.put(header, valor);
+
+                        if (limpar(valor).contains(codigoBusca)) {
+                            contemCodigo = true;
                         }
-                        primeiraLinha = false;
-                        continue;
                     }
 
-                    // Verifica colunas A (0) e B (1)
-                    String colA = limpar(getValorCelula(row.getCell(0)));
-                    String colB = limpar(getValorCelula(row.getCell(1)));
-
-                    if (colA.contains(codigoBusca) || colB.contains(codigoBusca)) {
-                        Map<String, String> linha = new LinkedHashMap<>();
-                        int colunasTotais = Math.max(row.getLastCellNum(), headers.size());
-
-                        for (int i = 0; i < colunasTotais; i++) {
-                            Cell cell = row.getCell(i);
-                            String valor = getValorCelula(cell);
-                            String header = i < headers.size() ? headers.get(i) : "Coluna " + (i + 1);
-                            linha.put(header, valor);
-                        }
-
+                    if (contemCodigo) {
                         resultados.add(new LinhaResultadoDTO(nomeAba, linha));
                     }
                 }
@@ -73,40 +61,19 @@ public class TabelaCodigoService {
 
     private String getValorCelula(Cell cell) {
         if (cell == null) return "";
-
-        try {
-            switch (cell.getCellType()) {
-                case STRING:
-                    return cell.getStringCellValue();
-
-                case NUMERIC:
-                    if (DateUtil.isCellDateFormatted(cell)) {
-                        return cell.getDateCellValue().toString();
-                    }
-                    return String.valueOf(cell.getNumericCellValue());
-
-                case BOOLEAN:
-                    return String.valueOf(cell.getBooleanCellValue());
-
-                case FORMULA:
-                    // Retorna valor visível da fórmula
-                    switch (cell.getCachedFormulaResultType()) {
-                        case STRING:
-                            return cell.getStringCellValue();
-                        case NUMERIC:
-                            return String.valueOf(cell.getNumericCellValue());
-                        case BOOLEAN:
-                            return String.valueOf(cell.getBooleanCellValue());
-                        default:
-                            return cell.getCellFormula(); // fallback
-                    }
-
-                default:
-                    return "";
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue();
+            case NUMERIC -> {
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    yield cell.getDateCellValue().toString();
+                } else {
+                    yield String.valueOf(cell.getNumericCellValue());
+                }
             }
-        } catch (Exception e) {
-            return "";
-        }
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            case FORMULA -> cell.getCellFormula();
+            default -> "";
+        };
     }
 
     private String limpar(String valor) {
