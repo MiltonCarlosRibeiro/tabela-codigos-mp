@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <title>🔍 Tabela de Códigos MP</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+<header>
+    <img src="assets/logo.png" alt="Logo" class="logo" />
+    <h1>🔍 Tabela de Códigos MP</h1>
+</header>
+
+<main class="container">
+    <div class="search-box">
+        <input type="text" id="codigoInput" placeholder="Cole o código aqui (ex: MP1-0443)" />
+        <button onclick="buscarCodigo()">🔍 Pesquisar</button>
+    </div>
+
+    <div class="card" id="tabela-container">
+        <!-- Resultados serão inseridos aqui -->
+    </div>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
